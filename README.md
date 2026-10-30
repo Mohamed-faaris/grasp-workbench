@@ -1,74 +1,47 @@
 # Grasp Workbench
 
-A local workbench for experimenting with interchangeable robotic grasp-prediction models. The project separates model adapters from the UI so planar (2D) and spatial (6D) grasp pipelines can be integrated behind a common interface.
+A local workbench for Intel RealSense RGB-D capture and repeatable grasp-model inference.
 
-## Current status
+## What it does
 
-This repository is an **early scaffold**, not a ready-to-use grasp inference system.
-
-- The Streamlit UI and model-profile registry are present.
-- Model profiles describe planar depth-based and spatial grasp approaches.
-- Model adapters and pretrained checkpoints are not yet fully implemented or validated.
-- Live Intel RealSense D415 streaming is not yet integrated.
-- No robot motion, ROS 2, or MoveIt trajectory execution is performed.
-
-A model marked unavailable in the UI is not configured for inference. The workbench does not generate placeholder or random grasp predictions.
+- Captures aligned RGB and depth frames directly through the Intel RealSense SDK (`pyrealsense2`); no photo upload is required.
+- Keeps a latest-frame-only camera buffer, dropping stale frames rather than building a queue.
+- Lets you freeze one captured RGB-D frame.
+- Runs a configured model repeatedly against that exact frozen frame. The camera may continue streaming, but inference inputs remain unchanged until you capture another frame.
+- Supports planar (2D) and spatial (6D) model adapter profiles.
 
 ## Requirements
 
 - Ubuntu or another supported Linux environment
 - Python 3.11 or 3.12
+- Intel RealSense D415 (or a compatible RealSense device)
+- Intel RealSense SDK / librealsense installed and the camera accessible to your user
 - [uv](https://docs.astral.sh/uv/)
 
-## Setup
-
-Clone the repository and install its dependencies:
+## Install
 
 ```bash
 git clone https://github.com/Mohamed-faaris/grasp-workbench.git
 cd grasp-workbench
-
-uv lock
-uv sync
-```
-
-Run the UI:
-
-```bash
+uv sync --extra realsense
 uv run streamlit run app.py
 ```
 
-Streamlit prints the local URL (normally http://localhost:8501).
+If the SDK cannot find the camera, install/configure librealsense and its udev rules for your Ubuntu release, reconnect the camera, and verify it with `rs-enumerate-devices`.
 
-For development and tests:
+## Workflow
 
-```bash
-uv sync --extra dev
-uv run pytest
-uv run ruff check .
-```
+1. Select the D415 device, resolution, and FPS in the sidebar.
+2. Start the camera and inspect the live RGB preview and aligned depth status.
+3. Click **Capture one frame**. The RGB image, depth array (metres), and camera intrinsics are frozen together.
+4. Select a model and choose the number of repeated passes.
+5. Click **Run model repeatedly on frozen frame**. Every pass receives the same RGB/depth files and intrinsics; no camera frame is substituted mid-run.
 
-## Optional dependencies
+## Model integration status
 
-Install optional extras only when needed:
+The UI contains model profiles, but model-specific adapters/checkpoints still need to be installed and configured before predictions can run.
 
-```bash
-# PyTorch
-uv sync --extra torch
-
-# Intel RealSense Python bindings
-uv sync --extra realsense
-```
-
-The RealSense extra only installs the Python binding; it does not mean D415 capture has already been implemented in this scaffold.
-
-## Model integration
-
-Model profiles are defined in `configs/models.yaml`. Adapter expectations and the input/output contract are documented in [docs/ADAPTER_API.md](docs/ADAPTER_API.md).
-
-The intended model families include:
-
-| Model | Intended input | Output family |
+| Model | Input | Output |
 |---|---|---|
 | GG-CNN2 | Depth image | Planar grasp |
 | GR-ConvNet | Depth image | Planar grasp |
@@ -76,14 +49,12 @@ The intended model families include:
 | Contact-GraspNet | Point cloud | Spatial grasp |
 | GraspNet baseline | RGB-D / point cloud | Spatial grasp |
 
-These are integration targets, not a claim that their upstream implementations or checkpoints are bundled and working. Check each upstream project's license, dependencies, checkpoint instructions, and hardware requirements before installing or running it.
+The camera capture path is implemented; this does **not** mean the above model inference backends are already implemented or validated. Models marked unavailable are disabled. No random or placeholder grasp outputs are shown.
 
-## Performance and safety
+Adapter request/response format: [docs/ADAPTER_API.md](docs/ADAPTER_API.md).
 
-- A future camera pipeline should favor dropping stale frames over building an inference backlog.
-- Predictions must be validated against the camera calibration and robot coordinate frames before being used by a robot.
-- This project currently does not command a robot or execute grasp trajectories.
+## Notes
 
-## License
-
-No project license has been added yet. Until one is added, do not assume the repository grants permission to redistribute or reuse its code.
+- The SDK capture thread stores only the newest frame to prevent latency from accumulating.
+- Depth is aligned to the color stream and converted from device units to metres.
+- This project does not publish ROS topics, transform poses into the robot base frame, or execute robot motion.

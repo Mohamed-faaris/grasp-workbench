@@ -1,7 +1,7 @@
 [project]
 name = "grasp-workbench"
-version = "0.2.0"
-description = "Unified UI and adapter host for 2D and 6D robotic grasp models"
+version = "0.3.0"
+description = "RealSense RGB-D capture and repeatable inference workbench for grasp models"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = ["numpy>=1.26", "opencv-python>=4.9", "streamlit>=1.38", "pillow>=10", "pyyaml>=6"]
