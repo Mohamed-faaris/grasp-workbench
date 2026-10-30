@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+external/
+models/weights/
+outputs/
+*.pt
+*.pth
+*.tar
