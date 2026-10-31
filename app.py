@@ -99,9 +99,35 @@ if capture_col.button("Capture one frame", type="primary", disabled=camera.statu
         st.error("No frame received yet. Wait for the camera stream.")
     else:
         st.session_state.frozen_frame = captured
-        st.success(f"Captured frame #{camera.frame_number}. This exact frame is now frozen.")
+        ts_dir = ROOT / "data" / "timestamps" / str(int(captured["timestamp_ms"]))
+        ts_dir.mkdir(parents=True, exist_ok=True)
+        Image.fromarray(captured["color_rgb"]).save(ts_dir / "rgb.png")
+        np.save(ts_dir / "depth_m.npy", captured["depth_m"])
+        (ts_dir / "intrinsics.json").write_text(json.dumps(captured["intrinsics"]))
+        (ts_dir / "timestamp_ms.txt").write_text(str(captured["timestamp_ms"]))
+        st.success(f"Captured frame #{camera.frame_number}. Saved to {ts_dir}.")
 if clear_col.button("Clear frame"):
     st.session_state.frozen_frame = None
+
+st.divider()
+st.caption("Saved captures")
+saved_root = ROOT / "data" / "timestamps"
+saved_dirs = sorted(
+    [d for d in saved_root.iterdir() if d.is_dir()],
+    key=lambda d: d.name,
+    reverse=True,
+)
+saved_labels = [d.name for d in saved_dirs]
+if saved_labels:
+    load_sel = st.selectbox("Load saved capture", ["<none>"] + saved_labels)
+    if load_sel != "<none>" and st.button("Load selected capture"):
+        ts_dir = saved_root / load_sel
+        st.session_state.frozen_frame = {
+            "color_rgb": np.array(Image.open(ts_dir / "rgb.png")),
+            "depth_m": np.load(ts_dir / "depth_m.npy"),
+            "intrinsics": json.loads((ts_dir / "intrinsics.json").read_text()),
+            "timestamp_ms": float((ts_dir / "timestamp_ms.txt").read_text()),
+        }
 
 frozen = st.session_state.frozen_frame
 if frozen is not None:
@@ -173,6 +199,20 @@ if frozen is not None:
                 st.success(f"Completed {len(results)} pass(es) on the same captured frame.")
                 st.metric("Mean inference time", f"{np.mean(durations) * 1000:.1f} ms")
                 st.metric("Grasps in final pass", len(results[-1]["grasps"]))
+                annotated = np.array(frozen["color_rgb"]).copy()
+                try:
+                    import cv2
+                    for g in results[-1]["grasps"]:
+                        cx, cy = int(g["center_px"][0]), int(g["center_px"][1])
+                        ang = float(g["angle_rad"])
+                        length = int(g.get("width_px", 40) * 2)
+                        dx = int(np.cos(ang) * length / 2)
+                        dy = int(np.sin(ang) * length / 2)
+                        cv2.circle(annotated, (cx, cy), 4, (0, 255, 0), -1)
+                        cv2.line(annotated, (cx - dx, cy - dy), (cx + dx, cy + dy), (255, 0, 0), 2)
+                    st.image(annotated, caption="Annotated grasps", channels="RGB")
+                except Exception:
+                    pass
                 st.json(results[-1])
                 with st.expander("All pass outputs"):
                     for index, (result, duration) in enumerate(zip(results, durations), start=1):

@@ -3,34 +3,34 @@ models:
     label: GG-CNN2
     grasp_type: planar
     description: Depth-only dense quality, angle and width maps. Compatible checkpoint and adapter required.
-    enabled: false
-    command: ""
-    checkpoint: "models/weights/ggcnn2.pth"
+    enabled: true
+    command: external/ggcnn/.venv/bin/python external/ggcnn/adapter.py
+    checkpoint: models/weights/ggcnn2/ggcnn2_weights_cornell/epoch_50_cornell
   grconvnet:
     label: GR-ConvNet
     grasp_type: planar
     description: Residual convolutional planar grasp detector. Upstream adapter required.
-    enabled: false
-    command: ""
-    checkpoint: "external/robotic-grasping/trained-models"
+    enabled: true
+    command: external/robotic-grasping/.venv/bin/python external/robotic-grasping/adapter.py
+    checkpoint: external/robotic-grasping/trained-models/jacquard-d-grconvnet3-drop0-ch32/epoch_50_iou_0.94
   vgn:
     label: VGN
     grasp_type: spatial
     description: TSDF-based volumetric 6-DoF grasp prediction.
-    enabled: false
-    command: ""
-    checkpoint: "external/vgn/data/models/vgn_conv.pth"
+    enabled: true
+    command: external/vgn/.venv/bin/python external/vgn/adapter.py
+    checkpoint: external/vgn/data/models/vgn_conv.pth
   contact_graspnet:
     label: Contact-GraspNet
     grasp_type: spatial
     description: Point-cloud-based 6-DoF grasp generation.
     enabled: false
-    command: ""
-    checkpoint: "external/contact_graspnet/checkpoints"
+    command: ''
+    checkpoint: external/contact_graspnet/checkpoints
   graspnet:
     label: GraspNet baseline
     grasp_type: spatial
     description: RGB-D plus intrinsics to 6-DoF grasp proposals.
     enabled: false
-    command: ""
-    checkpoint: "external/graspnet-baseline/checkpoint-rs.tar"
+    command: ''
+    checkpoint: external/graspnet-baseline/checkpoint-rs.tar
